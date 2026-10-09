@@ -263,8 +263,8 @@ module.exports = {
         // collide on every system on which PHP is installed, we change the
         // default ports for both the logger and the dev servers. We have to set
         // both ports, because changing only one doesn't solve the issue.
-        port: 3000,
-        loggerPort: 9001,
+        port: Number(process.env.ZETTLR_DEV_PORT ?? 3000),
+        loggerPort: Number(process.env.ZETTLR_DEV_LOGGER_PORT ?? 9001),
         renderer: {
           config: './webpack.renderer.config.js',
           entryPoints: [
