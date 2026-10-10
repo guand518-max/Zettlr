@@ -13,6 +13,7 @@
  * END HEADER
  */
 
+import Diary from './diary'
 import DirDelete from './dir-delete'
 import DirNewProject from './dir-new-project'
 import DirNew from './dir-new'
@@ -55,6 +56,7 @@ import RenameTag from './rename-tag'
 import WorkspaceSort from './ws-sort'
 
 export const commands = [
+  Diary,
   DirDelete,
   DirNewProject,
   DirNew,

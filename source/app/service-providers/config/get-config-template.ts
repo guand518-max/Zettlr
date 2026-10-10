@@ -13,6 +13,7 @@
  */
 
 import { app, nativeTheme } from 'electron'
+import path from 'path'
 import * as bcp47 from 'bcp-47'
 import { v4 as uuid4 } from 'uuid'
 import getLanguageFile from '@common/util/get-language-file'
@@ -254,6 +255,10 @@ export interface ConfigOptions {
     fileManagerSplitSize: [number, number]
     editorSidebarSplitSize: [number, number]
   }
+  diary: {
+    rootDirectory: string
+    template: string
+  }
   system: {
     deleteOnFail: boolean
     leaveAppRunning: boolean
@@ -326,6 +331,10 @@ export function getConfigTemplate (): ConfigOptions {
     ui: {
       fileManagerSplitSize: [ 20, 80 ],
       editorSidebarSplitSize: [ 80, 20 ]
+    },
+    diary: {
+      rootDirectory: path.join(app.getPath('documents'), 'Diary'),
+      template: '# {{date}} {{weekday}}\n\n'
     },
     // Visible attachment filetypes
     attachmentExtensions: [],
