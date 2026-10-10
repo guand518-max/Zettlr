@@ -84,6 +84,7 @@ import { DateTime, Info } from 'luxon'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useConfigStore, useDocumentTreeStore } from 'source/pinia'
 import type { FSALEventPayload } from 'source/app/service-providers/fsal'
+import type { DiaryEntryList } from 'source/app/service-providers/commands/diary'
 
 const ipcRenderer = window.ipc
 const searchParams = new URLSearchParams(window.location.search)
@@ -98,7 +99,9 @@ const nextMonthLabel = trans('Next month')
 const openTodayLabel = trans('Open today\'s diary')
 
 const locale = computed(() => configStore.config.appLang)
-const rootDirectory = computed(() => configStore.config.diary.rootDirectory)
+const configuredRoot = computed(() => configStore.config.diary.rootDirectory)
+// Resolved by main, which applies the default if nothing is configured
+const rootDirectory = ref('')
 
 const today = ref(toDiaryDate(DateTime.local()))
 const viewMonth = ref(DateTime.local().startOf('month'))
@@ -114,7 +117,7 @@ const weekdayNames = computed(() => Info.weekdays('short', { locale: locale.valu
 
 const activeDate = computed(() => {
   const file = documentTreeStore.lastLeafActiveFile
-  if (file === undefined || !file.path.startsWith(rootDirectory.value)) {
+  if (file === undefined || rootDirectory.value === '' || !file.path.startsWith(rootDirectory.value)) {
     return undefined
   }
   return parseDiaryFilename(pathBasename(file.path))
@@ -137,8 +140,9 @@ function shiftMonth (delta: number): void {
 }
 
 async function loadEntries (): Promise<void> {
-  const dates: string[] = await ipcRenderer.invoke('application', { command: 'diary-list-entries' })
-  entries.value = new Set(dates)
+  const list: DiaryEntryList = await ipcRenderer.invoke('application', { command: 'diary-list-entries' })
+  rootDirectory.value = list.root
+  entries.value = new Set(list.dates)
 }
 
 function openEntry (date: string): void {
@@ -172,7 +176,7 @@ onMounted(() => {
 
   stopListening = ipcRenderer.on('fsal-event', (_, payload: FSALEventPayload) => {
     const changedPath = 'path' in payload ? payload.path : payload.descriptor.path
-    if (changedPath.startsWith(rootDirectory.value)) {
+    if (rootDirectory.value !== '' && changedPath.startsWith(rootDirectory.value)) {
       scheduleReload()
     }
   })
@@ -188,7 +192,7 @@ onBeforeUnmount(() => {
   clearInterval(todayInterval)
 })
 
-watch(rootDirectory, scheduleReload)
+watch(configuredRoot, scheduleReload)
 </script>
 
 <style lang="less">

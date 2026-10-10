@@ -18,6 +18,7 @@ import path from 'path'
 import { promises as fs } from 'fs'
 import type { AppServiceContainer } from 'source/app/app-service-container'
 import { diaryPathSegments, isValidDiaryDate, parseDiaryFilename, renderDiaryTemplate } from '@common/util/diary'
+import { getDefaultDiaryRoot } from '@providers/config/get-config-template'
 
 export interface DiaryOpenPayload {
   date: string
@@ -30,12 +31,17 @@ export interface DiaryOpenResult {
   created: boolean
 }
 
+export interface DiaryEntryList {
+  root: string
+  dates: string[]
+}
+
 export default class Diary extends ZettlrCommand {
   constructor (app: AppServiceContainer) {
     super(app, [ 'diary-open', 'diary-list-entries' ])
   }
 
-  async run (evt: string, arg?: DiaryOpenPayload): Promise<DiaryOpenResult|string[]|undefined> {
+  async run (evt: string, arg?: DiaryOpenPayload): Promise<DiaryOpenResult|DiaryEntryList|undefined> {
     if (evt === 'diary-open') {
       return await this.openEntry(arg)
     } else if (evt === 'diary-list-entries') {
@@ -44,16 +50,30 @@ export default class Diary extends ZettlrCommand {
   }
 
   private getRoot (): string {
-    return path.resolve(this._app.config.get().diary.rootDirectory)
+    const configured = this._app.config.get().diary.rootDirectory.trim()
+    return path.resolve(configured === '' ? getDefaultDiaryRoot() : configured)
+  }
+
+  private async getTemplate (): Promise<string> {
+    const { template, templateFile } = this._app.config.get().diary
+    if (templateFile.trim() !== '' && await this._app.fsal.isFile(templateFile)) {
+      try {
+        return await this._app.fsal.readTextFile(templateFile)
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err)
+        this._app.log.error(`[Diary] Could not read template file ${templateFile}: ${message}`, err)
+      }
+    }
+    return template
   }
 
   /**
-   * Returns all diary dates (YYYY-MM-DD) that have an entry, sorted ascending.
+   * Returns the diary root and all dates (YYYY-MM-DD) with an entry, sorted.
    */
-  private async listEntries (): Promise<string[]> {
+  private async listEntries (): Promise<DiaryEntryList> {
     const root = this.getRoot()
     if (!await this._app.fsal.isDir(root)) {
-      return []
+      return { root, dates: [] }
     }
 
     const dates: string[] = []
@@ -77,7 +97,7 @@ export default class Diary extends ZettlrCommand {
       }
     }
 
-    return dates.sort()
+    return { root, dates: dates.sort() }
   }
 
   private async openEntry (payload?: DiaryOpenPayload): Promise<DiaryOpenResult|undefined> {
@@ -94,8 +114,9 @@ export default class Diary extends ZettlrCommand {
 
     let created = false
     if (!await this._app.fsal.pathExists(filePath)) {
-      const { diary, appLang } = this._app.config.get()
-      await this._app.fsal.writeTextFile(filePath, renderDiaryTemplate(diary.template, payload.date, appLang))
+      const template = await this.getTemplate()
+      const contents = renderDiaryTemplate(template, payload.date, this._app.config.get().appLang)
+      await this._app.fsal.writeTextFile(filePath, contents)
       created = true
     }
 

@@ -5092,6 +5092,42 @@ msgstr ""
 msgid "Path to folder"
 msgstr "文件夹路径"
 
+#: source/win-main/sidebar/DiaryTab.vue
+msgid "Diary"
+msgstr "日记"
+
+#: source/win-main/sidebar/DiaryTab.vue
+msgid "Previous month"
+msgstr "上个月"
+
+#: source/win-main/sidebar/DiaryTab.vue
+msgid "Next month"
+msgstr "下个月"
+
+#: source/win-main/sidebar/DiaryTab.vue
+msgid "Open today's diary"
+msgstr "打开今天的日记"
+
+#: source/win-main/sidebar/DiaryTab.vue
+msgid "Entries this month: %s"
+msgstr "本月日记：%s 篇"
+
+#: source/win-main/sidebar/DiaryTab.vue
+msgid "Current streak: %s days"
+msgstr "连续写作：%s 天"
+
+#: source/win-preferences/schema/general.ts
+msgid "Diary entries are stored as YYYY/MM/YYYY-MM-DD.md inside the diary folder."
+msgstr "日记按 YYYY/MM/YYYY-MM-DD.md 的结构保存在日记文件夹中。"
+
+#: source/win-preferences/schema/general.ts
+msgid "Diary folder"
+msgstr "日记文件夹"
+
+#: source/win-preferences/schema/general.ts
+msgid "Template for new entries (optional)"
+msgstr "新日记模板（可选）"
+
 #~ msgid "Remove line breaks"
 #~ msgstr "删除换行"
 

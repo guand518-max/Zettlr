@@ -25,6 +25,7 @@ import type DocumentManager from '@providers/documents'
 import { DocumentType } from '@dts/common/documents'
 import { cmShortcutToElectron } from 'source/common/util/shortcuts'
 import { type MenuShortcutName, getCustomShortcut } from './shortcuts'
+import { toDiaryDate } from '@common/util/diary'
 
 export default function getMenu (
   logger: LogProvider,
@@ -174,6 +175,15 @@ export default function getMenu (
           label: trans('New directory…'),
           click: function (_menuitem, focusedWindow) {
             (focusedWindow as BrowserWindow|undefined)?.webContents.send('shortcut', 'new-dir')
+          }
+        },
+        {
+          id: 'menu.open_today_diary',
+          label: trans('Open today\'s diary'),
+          accelerator: sc('open-today-diary'),
+          click: function (_menuitem, _focusedWindow) {
+            commands.run('diary-open', { date: toDiaryDate(new Date()) })
+              .catch(e => logger.error(String(e.message), e))
           }
         },
         {

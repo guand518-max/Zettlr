@@ -48,7 +48,7 @@ export type ConfigurableEditorShortcuts = Extends<
   'tr-single-quotes-to-double'|'tr-straighten-quotes'|
   'tr-strip-duplicate-spaces'|'tr-title-case'
 >
-export type ConfigurableUIShortcuts = Extends<MenuShortcutName, 'previous-tab'|'next-tab'|'filter-files'>
+export type ConfigurableUIShortcuts = Extends<MenuShortcutName, 'previous-tab'|'next-tab'|'filter-files'|'open-today-diary'>
 
 /**
  * This type describes an entry of the ignored rules array in the config. We
@@ -258,6 +258,7 @@ export interface ConfigOptions {
   diary: {
     rootDirectory: string
     template: string
+    templateFile: string
   }
   system: {
     deleteOnFail: boolean
@@ -286,6 +287,10 @@ export interface ConfigOptions {
     showDocumentInfoText: boolean
     showPomodoroButton: boolean
   }
+}
+
+export function getDefaultDiaryRoot (): string {
+  return path.join(app.getPath('documents'), 'Diary')
 }
 
 export function getConfigTemplate (): ConfigOptions {
@@ -333,8 +338,9 @@ export function getConfigTemplate (): ConfigOptions {
       editorSidebarSplitSize: [ 80, 20 ]
     },
     diary: {
-      rootDirectory: path.join(app.getPath('documents'), 'Diary'),
-      template: '# {{date}} {{weekday}}\n\n'
+      rootDirectory: getDefaultDiaryRoot(),
+      template: '# {{date}} {{weekday}}\n\n',
+      templateFile: ''
     },
     // Visible attachment filetypes
     attachmentExtensions: [],
@@ -567,7 +573,8 @@ export function getConfigTemplate (): ConfigOptions {
       ui: {
         'next-tab': '',
         'previous-tab': '',
-        'filter-files': ''
+        'filter-files': '',
+        'open-today-diary': ''
       },
       editor: {
         'table-align': '',

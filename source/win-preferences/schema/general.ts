@@ -88,6 +88,33 @@ export function getGeneralFields (appLangOptions: Record<string, string>): Prefe
       ]
     },
     {
+      title: trans('Diary'),
+      infoString: trans('Diary entries are stored as YYYY/MM/YYYY-MM-DD.md inside the diary folder.'),
+      group: PreferencesGroups.General,
+      help: undefined,
+      fields: [
+        {
+          type: 'directory',
+          label: trans('Diary folder'),
+          model: 'diary.rootDirectory',
+          placeholder: trans('Path to folder')
+        },
+        {
+          type: 'file',
+          label: trans('Template for new entries (optional)'),
+          model: 'diary.templateFile',
+          placeholder: trans('Path to file'),
+          reset: '',
+          filter: [{ extensions: [ 'md', 'markdown', 'txt' ], name: 'Markdown' }]
+        },
+        {
+          type: 'form-text',
+          display: 'info',
+          contents: trans('Available Variables: %s', '{{date}}, {{year}}, {{month}}, {{day}}, {{weekday}}, {{longDate}}')
+        }
+      ]
+    },
+    {
       title: trans('Behavior'),
       group: PreferencesGroups.General,
       help: undefined, // TODO

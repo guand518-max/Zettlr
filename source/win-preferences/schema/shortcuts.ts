@@ -286,6 +286,13 @@ export function getShortcutFields (config: ConfigOptions): PreferencesFieldset[]
           model: 'shortcuts.ui.filter-files',
           defaultShortcut: defaultUIShortcut('filter-files'),
           conflicts: conflicts('filter-files')
+        },
+        {
+          type: 'shortcut',
+          label: trans('Open today\'s diary'),
+          model: 'shortcuts.ui.open-today-diary',
+          defaultShortcut: defaultUIShortcut('open-today-diary'),
+          conflicts: conflicts('open-today-diary')
         }
       ]
     }
