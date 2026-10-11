@@ -211,7 +211,7 @@ body {
 
     .diary-grid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: 3px;
       text-align: center;
     }
@@ -223,6 +223,9 @@ body {
     }
 
     .diary-day {
+      // The Windows theme gives every button a 50px min-width, which would
+      // push the Sunday column out of a narrow sidebar.
+      min-width: 0;
       font-size: 12px;
       padding: 5px 0;
       border: 1px solid transparent;
