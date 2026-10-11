@@ -31,6 +31,8 @@ import { hasMdOrCodeExt } from '@common/util/file-extention-checks'
 import { ignorePath } from '@common/util/ignore-path'
 import { showOnboardingWindow } from './onboarding-window'
 import { DateTime } from 'luxon'
+import { diaryPathSegments, isValidDiaryDate } from '@common/util/diary'
+import { getDefaultDiaryRoot } from './get-config-template'
 
 const ZETTLR_VERSION = app.getVersion()
 
@@ -286,6 +288,39 @@ export default class ConfigProvider extends ProviderContract {
         }
       }
     } // END: openPaths migration
+
+    // Diary-only favorites ({ date, title }) -> workspace favorites ({ path, title })
+    if (
+      readConfig.diary !== undefined &&
+      Array.isArray(readConfig.diary.favorites) &&
+      readConfig.diary.favorites.length > 0 &&
+      (!Array.isArray(readConfig.favorites) || readConfig.favorites.length === 0)
+    ) {
+      const root = typeof readConfig.diary.rootDirectory === 'string' && readConfig.diary.rootDirectory.trim() !== ''
+        ? readConfig.diary.rootDirectory
+        : getDefaultDiaryRoot()
+      const migrated: Array<{ path: string, title: string }> = []
+      for (const item of readConfig.diary.favorites) {
+        if (item === null || typeof item !== 'object') {
+          continue
+        }
+        if (typeof item.path === 'string' && item.path !== '') {
+          migrated.push({
+            path: item.path,
+            title: typeof item.title === 'string' && item.title.trim() !== '' ? item.title : path.basename(item.path)
+          })
+          continue
+        }
+        if (typeof item.date === 'string' && isValidDiaryDate(item.date)) {
+          migrated.push({
+            path: path.join(root, ...diaryPathSegments(item.date)),
+            title: typeof item.title === 'string' && item.title.trim() !== '' ? item.title : item.date
+          })
+        }
+      }
+      readConfig.favorites = migrated
+      delete readConfig.diary.favorites
+    }
   }
 
   /**

@@ -15,8 +15,9 @@
 import { trans } from '@common/i18n-renderer'
 import { type PreferencesFieldset } from '../App.vue'
 import { PreferencesGroups } from './_preferences-groups'
+import type { ConfigOptions } from 'source/app/service-providers/config/get-config-template'
 
-export function getGeneralFields (appLangOptions: Record<string, string>): PreferencesFieldset[] {
+export function getGeneralFields (appLangOptions: Record<string, string>, config: ConfigOptions): PreferencesFieldset[] {
   const updateSetting: PreferencesFieldset = {
     title: trans('Updates'),
     infoString: trans('If you installed Zettlr via a package manager, you should disable this.'),
@@ -52,7 +53,7 @@ export function getGeneralFields (appLangOptions: Record<string, string>): Prefe
     },
     {
       title: trans('Autosave'),
-      infoString: trans('Should Zettlr automatically save changes to your documents?'),
+      infoString: trans('Should Zettlr automatically save changes to your documents? With delayed autosave, each document is written to disk a few minutes after you stop editing it.'),
       group: PreferencesGroups.General,
       help: undefined, // TODO
       fields: [
@@ -64,8 +65,16 @@ export function getGeneralFields (appLangOptions: Record<string, string>): Prefe
           options: {
             off: trans('Never'),
             immediately: trans('Immediately'),
-            delayed: trans('After a short delay')
+            delayed: trans('After a delay')
           }
+        },
+        {
+          type: 'number',
+          label: trans('Autosave delay (minutes)'),
+          model: 'editor.autoSaveDelayMinutes',
+          min: 1,
+          max: 120,
+          disabled: config.editor.autoSave !== 'delayed'
         }
       ]
     },

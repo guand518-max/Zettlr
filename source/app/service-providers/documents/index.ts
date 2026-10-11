@@ -47,6 +47,7 @@ const MAX_VERSION_HISTORY = 100
 const DELAYED_SAVE_TIMEOUT = 5000
 // Even "immediate" should not save immediately to prevent race conditions on slower systems
 const IMMEDIATE_SAVE_TIMEOUT = 500
+const MIN_DELAYED_SAVE_MS = 5000
 
 export interface DocumentsUpdateContext {
   windowId?: string
@@ -742,17 +743,25 @@ current contents from the editor somewhere else, and restart the application.`
       doc.minimumVersion += 1
     }
 
-    const autoSave = this._app.config.get().editor.autoSave
+    const { autoSave, autoSaveDelayMinutes } = this._app.config.get().editor
 
     // No autosave
     if (autoSave === 'off') {
       return true
     }
 
+    let timeout = IMMEDIATE_SAVE_TIMEOUT
+    if (autoSave === 'delayed') {
+      const minutes = Number(autoSaveDelayMinutes)
+      timeout = Number.isFinite(minutes) && minutes > 0
+        ? Math.max(MIN_DELAYED_SAVE_MS, Math.round(minutes * 60_000))
+        : DELAYED_SAVE_TIMEOUT
+    }
+
     doc.saveTimeout = setTimeout(() => {
       this.saveFile(doc.filePath)
         .catch(err => this._app.log.error(`[Document Provider] Could not save file ${doc.filePath}: ${err.message as string}`, err))
-    }, autoSave === 'delayed' ? DELAYED_SAVE_TIMEOUT : IMMEDIATE_SAVE_TIMEOUT)
+    }, timeout)
 
     return true
   }

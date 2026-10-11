@@ -112,3 +112,21 @@ export function buildMonthGrid (year: number, month: number): DiaryMonthGrid {
     daysInMonth: start.daysInMonth ?? 0
   }
 }
+
+export type ChineseDateTimeStyle = 'date'|'datetime'
+
+/**
+ * Formats a timestamp in Chinese diary style, e.g. `2026年6月1日` or
+ * `2026年6月1日 00:56:33`. Month and day are not zero-padded.
+ */
+export function formatChineseDateTime (
+  date: Date|DateTime = DateTime.local(),
+  style: ChineseDateTimeStyle = 'datetime'
+): string {
+  const dt = date instanceof Date ? DateTime.fromJSDate(date) : date
+  if (style === 'date') {
+    return dt.toFormat('yyyy年M月d日')
+  }
+  return dt.toFormat('yyyy年M月d日 HH:mm:ss')
+}
+

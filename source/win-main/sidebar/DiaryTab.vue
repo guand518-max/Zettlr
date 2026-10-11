@@ -50,6 +50,61 @@
       ></ButtonControl>
     </div>
 
+    <section class="diary-favorites">
+      <h2>{{ favoritesLabel }}</h2>
+      <div class="diary-favorites-actions">
+        <ButtonControl
+          v-bind:label="addFavoriteLabel"
+          v-bind:disabled="!canAddFavorite"
+          v-bind:inline="true"
+          v-on:click="addCurrentFavorite()"
+        ></ButtonControl>
+      </div>
+      <ul v-if="favorites.length > 0" class="diary-favorites-list">
+        <li
+          v-for="(item, index) in favorites"
+          v-bind:key="item.path"
+          v-bind:class="{ 'is-active': item.path === activeFavoritePath }"
+        >
+          <input
+            v-if="editingIndex === index"
+            type="text"
+            class="diary-favorite-title-input"
+            v-bind:value="editingTitle"
+            v-on:input="editingTitle = ($event.target as HTMLInputElement).value"
+            v-on:keydown.enter.prevent="commitRename()"
+            v-on:keydown.escape.prevent="cancelRename()"
+            v-on:blur="commitRename()"
+          >
+          <button
+            v-else
+            type="button"
+            class="diary-favorite-open"
+            v-bind:title="item.path"
+            v-on:click="openFavorite(item)"
+            v-on:dblclick="startRename(index)"
+          >
+            <span
+              class="diary-favorite-kind"
+              v-bind:class="favoriteKind(item.path)"
+            ></span>
+            {{ item.title }}
+          </button>
+          <button
+            type="button"
+            class="diary-favorite-remove"
+            v-bind:title="removeFavoriteLabel"
+            v-on:click="removeFavorite(index)"
+          >
+            ×
+          </button>
+        </li>
+      </ul>
+      <p v-else class="diary-favorites-empty">
+        {{ favoritesEmptyLabel }}
+      </p>
+    </section>
+
     <p class="diary-stats">
       {{ monthCountLabel }}<br>
       {{ streakLabel }}
@@ -71,7 +126,7 @@
  * License:         GNU GPL v3
  *
  * Description:     Sidebar tab with a month calendar to open or create diary
- *                  entries.
+ *                  entries, plus favorites for any workspace file or directory.
  *
  * END HEADER
  */
@@ -79,12 +134,28 @@
 import { trans } from '@common/i18n-renderer'
 import ButtonControl from '@common/vue/form/elements/ButtonControl.vue'
 import { pathBasename } from '@common/util/renderer-path-polyfill'
-import { buildMonthGrid, computeStreak, parseDiaryFilename, toDiaryDate } from '@common/util/diary'
+import {
+  buildMonthGrid,
+  computeStreak,
+  formatChineseDateTime,
+  parseDiaryFilename,
+  toDiaryDate
+} from '@common/util/diary'
+import {
+  addFavoriteItem,
+  removeFavoriteAt,
+  renameFavoriteAt,
+  hasFavorite,
+  toPlainFavorites,
+  type FavoriteItem
+} from '@common/util/favorites'
 import { DateTime, Info } from 'luxon'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useConfigStore, useDocumentTreeStore } from 'source/pinia'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useConfigStore, useDocumentTreeStore, useWorkspaceStore, useWindowStateStore } from 'source/pinia'
 import type { FSALEventPayload } from 'source/app/service-providers/fsal'
 import type { DiaryEntryList } from 'source/app/service-providers/commands/diary'
+import type { DocumentManagerIPCAPI } from 'source/app/service-providers/documents'
+import getDocumentTitle from '../util/get-document-title'
 
 const ipcRenderer = window.ipc
 const searchParams = new URLSearchParams(window.location.search)
@@ -92,20 +163,30 @@ const windowId = searchParams.get('window_id') ?? undefined
 
 const configStore = useConfigStore()
 const documentTreeStore = useDocumentTreeStore()
+const workspaceStore = useWorkspaceStore()
+const windowStateStore = useWindowStateStore()
 
 const diaryLabel = trans('Diary')
 const previousMonthLabel = trans('Previous month')
 const nextMonthLabel = trans('Next month')
 const openTodayLabel = trans('Open today\'s diary')
+const favoritesLabel = trans('Favorites')
+const addFavoriteLabel = trans('Add to favorites')
+const removeFavoriteLabel = trans('Remove from favorites')
+const favoritesEmptyLabel = trans('No favorites yet. Right-click a file or folder, or open one and add it here.')
 
 const locale = computed(() => configStore.config.appLang)
 const configuredRoot = computed(() => configStore.config.diary.rootDirectory)
+const favorites = computed<FavoriteItem[]>(() => configStore.config.favorites ?? [])
+const openDirectory = computed(() => configStore.config.openDirectory)
 // Resolved by main, which applies the default if nothing is configured
 const rootDirectory = ref('')
 
 const today = ref(toDiaryDate(DateTime.local()))
 const viewMonth = ref(DateTime.local().startOf('month'))
 const entries = ref<Set<string>>(new Set())
+const editingIndex = ref<number|null>(null)
+const editingTitle = ref('')
 
 const grid = computed(() => buildMonthGrid(viewMonth.value.year, viewMonth.value.month))
 
@@ -115,12 +196,39 @@ const monthLabel = computed(() => {
 
 const weekdayNames = computed(() => Info.weekdays('short', { locale: locale.value }))
 
+const activeFilePath = computed(() => documentTreeStore.lastLeafActiveFile?.path)
+
 const activeDate = computed(() => {
-  const file = documentTreeStore.lastLeafActiveFile
-  if (file === undefined || rootDirectory.value === '' || !file.path.startsWith(rootDirectory.value)) {
+  const filePath = activeFilePath.value
+  if (filePath === undefined || rootDirectory.value === '' || !filePath.startsWith(rootDirectory.value)) {
     return undefined
   }
-  return parseDiaryFilename(pathBasename(file.path))
+  return parseDiaryFilename(pathBasename(filePath))
+})
+
+const candidateFavorite = computed<FavoriteItem|undefined>(() => {
+  if (activeFilePath.value !== undefined) {
+    return {
+      path: activeFilePath.value,
+      title: favoriteTitleForPath(activeFilePath.value)
+    }
+  }
+  if (typeof openDirectory.value === 'string' && openDirectory.value !== '') {
+    return {
+      path: openDirectory.value,
+      title: favoriteTitleForPath(openDirectory.value)
+    }
+  }
+  return undefined
+})
+
+const canAddFavorite = computed(() => {
+  return candidateFavorite.value !== undefined &&
+    !hasFavorite(favorites.value, candidateFavorite.value.path)
+})
+
+const activeFavoritePath = computed(() => {
+  return activeFilePath.value ?? openDirectory.value
 })
 
 const monthCount = computed(() => {
@@ -158,6 +266,95 @@ function openToday (): void {
   today.value = toDiaryDate(DateTime.local())
   viewMonth.value = DateTime.local().startOf('month')
   openEntry(today.value)
+}
+
+function favoriteKind (absPath: string): 'file'|'directory' {
+  const descriptor = workspaceStore.descriptorMap.get(absPath)
+  if (descriptor?.type === 'directory') {
+    return 'directory'
+  }
+  return 'file'
+}
+
+function favoriteTitleForPath (absPath: string): string {
+  const descriptor = workspaceStore.descriptorMap.get(absPath)
+  if (descriptor?.type === 'file') {
+    return getDocumentTitle(descriptor)
+  }
+  if (descriptor?.type === 'directory') {
+    return descriptor.name
+  }
+  const base = pathBasename(absPath)
+  const diaryDate = parseDiaryFilename(base)
+  if (diaryDate !== undefined) {
+    return formatChineseDateTime(DateTime.fromISO(diaryDate), 'date')
+  }
+  return base.replace(/\.[^.]+$/, '') || base
+}
+
+function saveFavorites (next: FavoriteItem[]): void {
+  // Must be plain data: config.set crosses the Electron IPC boundary.
+  configStore.setConfigValue('favorites', toPlainFavorites(next))
+}
+
+function addCurrentFavorite (): void {
+  if (candidateFavorite.value === undefined || !canAddFavorite.value) {
+    return
+  }
+  saveFavorites(addFavoriteItem(favorites.value, candidateFavorite.value))
+}
+
+function removeFavorite (index: number): void {
+  if (editingIndex.value === index) {
+    cancelRename()
+  }
+  saveFavorites(removeFavoriteAt(favorites.value, index))
+}
+
+function openFavorite (item: FavoriteItem): void {
+  if (favoriteKind(item.path) === 'directory') {
+    configStore.setConfigValue('window.fileManagerVisible', true)
+    configStore.setConfigValue('openDirectory', item.path)
+    if (!windowStateStore.uncollapsedDirectories.includes(item.path)) {
+      windowStateStore.uncollapsedDirectories.push(item.path)
+    }
+    return
+  }
+
+  ipcRenderer.invoke('documents-provider', {
+    command: 'open-file',
+    payload: {
+      path: item.path,
+      windowId,
+      leafId: documentTreeStore.lastLeafId
+    }
+  } as DocumentManagerIPCAPI)
+    .catch(err => console.error(err))
+}
+
+function startRename (index: number): void {
+  editingIndex.value = index
+  editingTitle.value = favorites.value[index]?.title ?? ''
+  nextTick().then(() => {
+    const input = document.querySelector('.diary-favorite-title-input') as HTMLInputElement|null
+    input?.focus()
+    input?.select()
+  }).catch(err => console.error(err))
+}
+
+function commitRename (): void {
+  const index = editingIndex.value
+  if (index === null) {
+    return
+  }
+  const next = renameFavoriteAt(favorites.value, index, editingTitle.value)
+  editingIndex.value = null
+  saveFavorites(next)
+}
+
+function cancelRename (): void {
+  editingIndex.value = null
+  editingTitle.value = ''
 }
 
 let reloadTimeout: ReturnType<typeof setTimeout>|undefined
@@ -223,8 +420,6 @@ body {
     }
 
     .diary-day {
-      // The Windows theme gives every button a 50px min-width, which would
-      // push the Sunday column out of a narrow sidebar.
       min-width: 0;
       font-size: 12px;
       padding: 5px 0;
@@ -249,6 +444,109 @@ body {
     .diary-actions {
       margin: 12px 0;
       text-align: center;
+    }
+
+    .diary-favorites {
+      margin: 12px 0;
+      padding-top: 8px;
+      border-top: 1px solid rgba(127, 127, 127, 0.25);
+
+      h2 {
+        margin: 0 0 6px;
+        font-size: 13px;
+      }
+    }
+
+    .diary-favorites-actions {
+      margin-bottom: 6px;
+    }
+
+    .diary-favorites-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+
+      li {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 0 0 2px;
+        border-radius: 4px;
+
+        &.is-active {
+          background-color: rgba(127, 127, 127, 0.15);
+        }
+      }
+    }
+
+    .diary-favorite-open,
+    .diary-favorite-title-input {
+      flex: 1;
+      min-width: 0;
+      padding: 4px 6px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    .diary-favorite-open {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+
+      &:hover {
+        background-color: rgba(127, 127, 127, 0.2);
+      }
+    }
+
+    .diary-favorite-kind {
+      flex: 0 0 auto;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      background-color: rgba(127, 127, 127, 0.7);
+
+      &.directory {
+        background-color: var(--system-accent-color, #1cb27e);
+      }
+    }
+
+    .diary-favorite-title-input {
+      border-color: rgba(127, 127, 127, 0.4);
+    }
+
+    .diary-favorite-remove {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: inherit;
+      opacity: 0.55;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+
+      &:hover {
+        opacity: 1;
+        background-color: rgba(127, 127, 127, 0.2);
+      }
+    }
+
+    .diary-favorites-empty {
+      margin: 0;
+      font-size: 11px;
+      opacity: 0.6;
     }
 
     .diary-stats {

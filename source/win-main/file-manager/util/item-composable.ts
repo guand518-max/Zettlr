@@ -22,6 +22,8 @@ import { ref, computed, type Ref, watch, nextTick } from 'vue'
 import { hasImageExt, hasPDFExt } from 'source/common/util/file-extention-checks'
 import makeValidUri from 'source/common/util/make-valid-uri'
 import type { DocumentManagerIPCAPI } from 'source/app/service-providers/documents'
+import getDocumentTitle from 'source/win-main/util/get-document-title'
+import { addFavoriteItem, removeFavoriteAt, toPlainFavorites } from '@common/util/favorites'
 
 const ipcRenderer = window.ipc
 
@@ -245,6 +247,8 @@ export function useItemComposable (
             .catch(err => console.error(err))
         } else if (clickedID === 'menu.properties') {
           showPopover.value = true
+        } else if (clickedID === 'menu.toggle_favorite') {
+          toggleFavorite(obj.value.path, obj.value.name)
         }
       })
     } else {
@@ -280,10 +284,25 @@ export function useItemComposable (
             .catch(err => console.error(err))
         } else if (clickedID === 'properties') {
           showPopover.value = true
+        } else if (clickedID === 'menu.toggle_favorite') {
+          const title = obj.value.type === 'file'
+            ? getDocumentTitle(obj.value)
+            : obj.value.name
+          toggleFavorite(obj.value.path, title)
         } else if (clickedID === 'menu.close_file') {
           closeFile(obj.value.path)
         }
       })
+    }
+  }
+
+  function toggleFavorite (absPath: string, title: string): void {
+    const current = toPlainFavorites(configStore.config.favorites ?? [])
+    const existing = current.findIndex(item => item.path === absPath)
+    if (existing >= 0) {
+      configStore.setConfigValue('favorites', removeFavoriteAt(current, existing))
+    } else {
+      configStore.setConfigValue('favorites', addFavoriteItem(current, { path: absPath, title }))
     }
   }
 

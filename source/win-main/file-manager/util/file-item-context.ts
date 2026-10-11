@@ -37,6 +37,13 @@ export function displayFileContext (event: MouseEvent, fileObject: MDFileDescrip
       type: 'normal'
     },
     {
+      label: configStore.config.favorites?.some(item => item.path === fileObject.path) === true
+        ? trans('Remove from favorites')
+        : trans('Add to favorites'),
+      id: 'menu.toggle_favorite',
+      type: 'normal'
+    },
+    {
       type: 'separator'
     },
     {

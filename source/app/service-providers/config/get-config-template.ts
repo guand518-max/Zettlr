@@ -157,6 +157,11 @@ export interface ConfigOptions {
     autocompleteWithEnter: boolean
     autocompleteWithTab: boolean
     autoSave: 'off'|'immediately'|'delayed'
+    /**
+     * Minutes to wait after the last edit before saving when autoSave is
+     * `delayed`. Values below 1 are treated as 1.
+     */
+    autoSaveDelayMinutes: number
     citeStyle: 'in-text'|'in-text-suffix'|'regular'
     autoCloseBrackets: boolean
     showLinkPreviews: boolean
@@ -260,6 +265,10 @@ export interface ConfigOptions {
     template: string
     templateFile: string
   }
+  /**
+   * Quick-access favorites for workspace files and directories.
+   */
+  favorites: Array<{ path: string, title: string }>
   system: {
     deleteOnFail: boolean
     leaveAppRunning: boolean
@@ -342,6 +351,7 @@ export function getConfigTemplate (): ConfigOptions {
       template: '# {{date}} {{weekday}}\n\n',
       templateFile: ''
     },
+    favorites: [],
     // Visible attachment filetypes
     attachmentExtensions: [],
     // UI related options
@@ -395,7 +405,9 @@ export function getConfigTemplate (): ConfigOptions {
     },
     // Editor related stuff
     editor: {
-      autoSave: 'off',
+      // Delayed autosave keeps edits on disk without prompting on close.
+      autoSave: 'delayed',
+      autoSaveDelayMinutes: 2,
       autocompleteSuggestEmojis: true,
       snippetAutocompleteTriggerCharacter: ':',
       autocompleteWithEnter: false,

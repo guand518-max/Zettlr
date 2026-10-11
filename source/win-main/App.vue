@@ -127,6 +127,12 @@
     v-on:close="showPandocPopover = false"
     v-on:insert-pandoc="insertPandoc($event)"
   ></PopoverPandoc>
+  <PopoverInsertDatetime
+    v-if="showInsertDatetimePopover && insertDatetimeButton !== null"
+    v-bind:target="insertDatetimeButton"
+    v-on:close="showInsertDatetimePopover = false"
+    v-on:insert="insertDatetime($event)"
+  ></PopoverInsertDatetime>
 </template>
 
 <script setup lang="ts">
@@ -158,6 +164,7 @@ import PopoverPomodoro from './PopoverPomodoro.vue'
 import PopoverTable from './PopoverTable.vue'
 import PopoverDocInfo from './PopoverDocInfo.vue'
 import PopoverPandoc from './PopoverPandoc.vue'
+import PopoverInsertDatetime from './PopoverInsertDatetime.vue'
 import { trans } from '@common/i18n-renderer'
 import localiseNumber from '@common/util/localise-number'
 import generateId from '@common/util/generate-id'
@@ -243,6 +250,8 @@ const tasksButton = ref<HTMLElement|null>(null)
 const showTasksPopover = ref(false)
 const pandocButton = ref<HTMLElement|null>(null)
 const showPandocPopover = ref<boolean>(false)
+const insertDatetimeButton = ref<HTMLElement|null>(null)
+const showInsertDatetimePopover = ref<boolean>(false)
 
 export interface PomodoroConfig {
   currentEffectFile: string
@@ -563,6 +572,12 @@ const toolbarControls = computed<ToolbarControl[]>(() => {
       visible: getToolbarButtonDisplay('showInsertFootnoteButton')
     },
     {
+      type: 'button',
+      id: 'insert-datetime',
+      title: trans('Insert current time'),
+      icon: 'clock'
+    },
+    {
       type: 'spacer',
       size: '3x'
     },
@@ -684,6 +699,7 @@ onMounted(() => {
   pomodoroButton.value = document.querySelector('#toolbar-pomodoro')
   tasksButton.value = document.querySelector('#toolbar-long-running-tasks')
   pandocButton.value = document.querySelector('#toolbar-pandocDivOrSpan')
+  insertDatetimeButton.value = document.querySelector('#toolbar-insert-datetime')
 
   ipcRenderer.on('shortcut', (event, shortcut) => {
     if (shortcut === 'toggle-sidebar') {
@@ -796,6 +812,11 @@ function insertTable (spec: { rows: number, cols: number }): void {
 function insertPandoc (spec: { type: string, attributes: string }): void {
   editorCommands.value.data = spec
   editorCommands.value.insertPandoc = !editorCommands.value.insertPandoc
+}
+
+function insertDatetime (text: string): void {
+  editorCommands.value.data = text
+  editorCommands.value.replaceSelection = !editorCommands.value.replaceSelection
 }
 
 function genericJtl (lineNumber: number): void {
@@ -935,6 +956,9 @@ function handleClick (clickedID?: string): void {
     showDocInfoPopover.value = !showDocInfoPopover.value
   } else if (clickedID === 'pandocDivOrSpan') {
     showPandocPopover.value = !showPandocPopover.value
+  } else if (clickedID === 'insert-datetime') {
+    insertDatetimeButton.value = document.querySelector('#toolbar-insert-datetime')
+    showInsertDatetimePopover.value = !showInsertDatetimePopover.value
   } else if (clickedID !== undefined && clickedID.startsWith('markdown') && clickedID.length > 8) {
     // The user clicked a command button, so we just have to run that.
     editorCommands.value.data = clickedID

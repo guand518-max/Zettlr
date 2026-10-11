@@ -5128,6 +5128,48 @@ msgstr "日记文件夹"
 msgid "Template for new entries (optional)"
 msgstr "新日记模板（可选）"
 
+#: source/win-main/App.vue
+#: source/win-main/PopoverInsertDatetime.vue
+msgid "Insert current time"
+msgstr "插入当前时间"
+
+#: source/win-main/sidebar/DiaryTab.vue
+msgid "Favorites"
+msgstr "收藏"
+
+#: source/win-main/sidebar/DiaryTab.vue
+msgid "Add to favorites"
+msgstr "添加到收藏夹"
+
+#: source/win-main/sidebar/DiaryTab.vue
+msgid "Remove from favorites"
+msgstr "从收藏夹移除"
+
+#: source/win-main/sidebar/DiaryTab.vue
+msgid "No favorites yet. Right-click a file or folder, or open one and add it here."
+msgstr "还没有收藏。可在文件或文件夹上右键添加，也可打开后点下方按钮。"
+
+#: source/win-preferences/schema/general.ts
+msgid "Should Zettlr automatically save changes to your documents? With delayed autosave, each document is written to disk a few minutes after you stop editing it."
+msgstr "是否在编辑后自动保存文档？选择“延迟保存”时，停止编辑若干分钟后会写入磁盘，异常关闭也不易丢失。"
+
+#: source/win-preferences/schema/general.ts
+msgid "After a delay"
+msgstr "延迟保存"
+
+#: source/win-preferences/schema/general.ts
+msgid "Autosave delay (minutes)"
+msgstr "自动保存延迟（分钟）"
+
+#~ msgid "No favorite diary entries yet."
+#~ msgstr "还没有收藏的日记。"
+
+#~ msgid "After a short delay"
+#~ msgstr "短暂延迟后"
+
+#~ msgid "Should Zettlr automatically save changes to your documents?"
+#~ msgstr "是否自动保存对当前文档的更改？"
+
 #~ msgid "Remove line breaks"
 #~ msgstr "删除换行"
 

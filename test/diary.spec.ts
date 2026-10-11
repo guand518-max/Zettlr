@@ -21,7 +21,8 @@ import {
   parseDiaryFilename,
   renderDiaryTemplate,
   computeStreak,
-  buildMonthGrid
+  buildMonthGrid,
+  formatChineseDateTime
 } from '../source/common/util/diary'
 
 describe('Utility#diary', function () {
@@ -80,5 +81,12 @@ describe('Utility#diary', function () {
     assert.deepStrictEqual(buildMonthGrid(2024, 2), { padding: 3, daysInMonth: 29 })
     // 2026-06-01 is a Monday
     assert.deepStrictEqual(buildMonthGrid(2026, 6), { padding: 0, daysInMonth: 30 })
+  })
+
+  it('formats Chinese date and datetime strings', function () {
+    const dt = DateTime.local(2026, 6, 1, 0, 56, 33)
+    assert.strictEqual(formatChineseDateTime(dt, 'date'), '2026年6月1日')
+    assert.strictEqual(formatChineseDateTime(dt, 'datetime'), '2026年6月1日 00:56:33')
+    assert.strictEqual(formatChineseDateTime(DateTime.local(2026, 10, 11, 19, 15, 36), 'date'), '2026年10月11日')
   })
 })

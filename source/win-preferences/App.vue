@@ -141,7 +141,7 @@ const fieldsets = computed<Fieldset[]>(() => {
     ...getCitationFields(),
     ...getEditorFields(configStore.config),
     ...getFileManagerFields(configStore.config),
-    ...getGeneralFields(appLangOptions.value),
+    ...getGeneralFields(appLangOptions.value, configStore.config),
     ...getImportExportFields(),
     ...getShortcutFields(configStore.config),
     ...getSnippetsFields(),

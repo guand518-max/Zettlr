@@ -32,6 +32,13 @@ export function displayDirContext (event: MouseEvent, dirObject: DirDescriptor, 
       type: 'normal'
     },
     {
+      label: configStore.config.favorites?.some(item => item.path === dirObject.path) === true
+        ? trans('Remove from favorites')
+        : trans('Add to favorites'),
+      id: 'menu.toggle_favorite',
+      type: 'normal'
+    },
+    {
       type: 'separator'
     },
     {
